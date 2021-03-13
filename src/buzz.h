@@ -1,0 +1,35 @@
+#ifndef _BUGOUT_BUZZ_H
+#define _BUGOUT_BUZZ_H
+
+#include <stdio.h>
+
+#define BUGOUT_BUZZ_WILDCARD_CHAR '*'
+#define BUGOUT_BUZZ_CAPTURE_CHAR '#'
+
+enum _parse_status {
+    PARSE_VALID = 0,
+    PARSE_CATASTROPHIC = 1,
+    PARSE_WARN = 2,
+};
+
+typedef struct TagPattern {
+    int length;
+    char* pattern;
+    int capture_from;
+    int capture_until;
+    int parse_status;
+} TagPattern;
+
+void print_tag_pattern(TagPattern tag_pattern);
+
+/**
+ * Reads a single TagPattern object from a string.
+ */
+TagPattern read_pattern(char* raw_pattern);
+
+/**
+ * Reads a list of TagPattern objects from a file.
+ */
+TagPattern* read_patterns(FILE* patterns_file_pointer);
+
+#endif // _BUGOUT_BUZZ_H

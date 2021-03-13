@@ -58,7 +58,7 @@ int main(int argc, char* argv[]) {
     result += test_read_pattern("python:#.", "python:#.", 7, 7, '\0', -1, -1, PARSE_INVALID);
 
     printf("Testing pattern with multiple captures...\n");
-    result += test_read_pattern("omg#<0>.wtf#<0>.bbq", "omg#<0>.wtf#<0>.bbq", 11, 3, '.', 0, 7, PARSE_INVALID);
+    result += test_read_pattern("omg#<0>*wtf#<0>*bbq", "omg#<0>*wtf#<0>*bbq", 11, 3, '*', 0, 7, PARSE_INVALID);
 
     printf("Testing pattern with whitespace in it...\n");
     result += test_read_pattern("omg wtf bbq", "omg wtf bbq", 3, -1, '\0', -1, -1, PARSE_INVALID);

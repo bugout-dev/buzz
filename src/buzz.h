@@ -5,18 +5,25 @@
 
 #define BUGOUT_BUZZ_WILDCARD_CHAR '*'
 #define BUGOUT_BUZZ_CAPTURE_CHAR '#'
+#define BUGOUT_BUZZ_BOUNDARY_START_CHAR '<'
+#define BUGOUT_BUZZ_BOUNDARY_END_CHAR '>'
 
 enum _parse_status {
     PARSE_VALID = 0,
-    PARSE_CATASTROPHIC = 1,
-    PARSE_WARN = 2,
+    PARSE_INVALID = 1,
 };
+
+typedef struct CaptureBoundary {
+    char character;
+    int skip;
+    int resume;
+} CaptureBoundary;
 
 typedef struct TagPattern {
     int length;
     char* pattern;
     int capture_from;
-    int capture_until;
+    CaptureBoundary boundary;
     int parse_status;
 } TagPattern;
 

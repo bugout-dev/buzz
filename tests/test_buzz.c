@@ -110,11 +110,17 @@ int main(int argc, char* argv[]) {
     printf("Testing pattern with simple capture...\n");
     result += test_read_pattern("python:#.", "python:#.", 9, 7, '.', 0, 8, PARSE_VALID);
 
+    printf("Testing pattern with capture at the end...\n");
+    result += test_read_pattern("python:#", "python:#", 8, 7, '\0', 0, -1, PARSE_VALID);
+
     printf("Testing pattern with multiple captures...\n");
     result += test_read_pattern("omg#<0>*wtf#<0>*bbq", "omg#<0>*wtf#<0>*bbq", 11, 3, '*', 0, 7, PARSE_INVALID);
 
     printf("Testing pattern with whitespace in it...\n");
     result += test_read_pattern("omg wtf bbq", "omg wtf bbq", 3, -1, '\0', -1, -1, PARSE_INVALID);
+
+    printf("Testing pattern with capture after wildcard...\n");
+    result += test_read_pattern("omg*#", "omg*#", 4, -1, '\0', -1, -1, PARSE_NO_CAPTURE_AFTER_WILDCARD);
 
     printf("Testing load_patterns with 2 patterns loaded into an empty patterns list...\n");
     result += test_load_pattern();

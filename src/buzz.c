@@ -42,6 +42,10 @@ void process_boundary(TagPattern* tag_pattern, int start) {
         boundary.resume = current_index;
         done = true;
     }
+    if (tag_pattern->pattern[current_index] == '\0') {
+        boundary.resume = -1;
+        done = true;
+    }
     if (!done) {
         current_index++;
         while (isdigit(tag_pattern->pattern[current_index])) {
@@ -74,6 +78,8 @@ TagPattern read_pattern(char* raw_pattern) {
     tag_pattern.capture_from = -1;
     tag_pattern.parse_status = PARSE_VALID;
 
+    bool post_wildcard = false;
+
     int raw_pattern_length = 0;
     while (raw_pattern[raw_pattern_length++] != '\0') {
         if (raw_pattern_length >= BUGOUT_BUZZ_MAX_PATTERN_LENGTH) {
@@ -96,13 +102,21 @@ TagPattern read_pattern(char* raw_pattern) {
             if (tag_pattern.capture_from > 0) {
                 tag_pattern.parse_status = PARSE_INVALID;
                 break;
+            } else if (post_wildcard) {
+                tag_pattern.parse_status = PARSE_NO_CAPTURE_AFTER_WILDCARD;
+                break;
             } else {
                 tag_pattern.capture_from = tag_pattern.length;
                 process_boundary(&tag_pattern, tag_pattern.length+1);
-                if (tag_pattern.parse_status == PARSE_INVALID || tag_pattern.boundary.resume == -1) {
+                if (tag_pattern.parse_status != PARSE_VALID || tag_pattern.boundary.resume == -1) {
                     break;
                 }
             }
+        }
+        if (raw_pattern[tag_pattern.length] == BUGOUT_BUZZ_WILDCARD_CHAR) {
+            post_wildcard = true;
+        } else {
+            post_wildcard = false;
         }
         tag_pattern.length++;
     }

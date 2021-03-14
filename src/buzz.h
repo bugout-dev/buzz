@@ -12,6 +12,7 @@
 enum _parse_status {
     PARSE_VALID = 0,
     PARSE_INVALID = 1,
+    PARSE_NO_CAPTURE_AFTER_WILDCARD = 2,
 };
 
 typedef struct CaptureBoundary {

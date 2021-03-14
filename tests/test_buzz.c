@@ -88,6 +88,7 @@ int test_load_pattern() {
         printf("\t- FAILURE!\n");
     }
 
+    destroy(head);
     return result;
 }
 

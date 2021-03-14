@@ -12,8 +12,8 @@ void destroy(TagPatternList* tag_pattern_list) {
     TagPatternList* next_item = NULL;
     while (current_item != NULL) {
         next_item = current_item->next;
-        free(tag_pattern_list->tag_pattern.pattern);
-        free(tag_pattern_list);
+        free(current_item->tag_pattern.pattern);
+        free(current_item);
         current_item = next_item;
     }
 };
@@ -127,6 +127,7 @@ TagPatternList* load_patterns_from_file(FILE* ifp) {
     int i = 0;
 
     while (c != EOF) {
+        printf("\nHELLO: %c\n", c);
         if (current_index >= BUGOUT_BUZZ_MAX_PATTERN_LENGTH) {
             keep_processing = false;
         }
@@ -139,6 +140,7 @@ TagPatternList* load_patterns_from_file(FILE* ifp) {
         } else if (keep_processing) {
             buffer[current_index++] = c;
         }
+        c = getc(ifp);
     }
 
     return patterns;

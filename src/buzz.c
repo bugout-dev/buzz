@@ -164,3 +164,74 @@ TagPatternList* load_patterns_from_file(FILE* ifp) {
 
     return patterns;
 };
+
+BuzzResult process_tag(char* tag, TagPattern* tag_pattern) {
+    int tag_index = 0;
+    int pattern_index = 0;
+
+    BuzzResult result;
+    result.tag = tag;
+    result.tag_pattern = tag_pattern;
+    result.match = true;
+    result.capture_start = -1;
+    result.capture_end = -1;
+
+    bool inside_nontrailing_wildcard = false;
+
+    while (result.match) {
+        if (tag[tag_index] == '\0') {
+            break;
+        }
+
+        if (pattern_index >= tag_pattern->length) {
+            break;
+        }
+
+        char pattern_current = tag_pattern->pattern[pattern_index];
+        if (pattern_current == BUGOUT_BUZZ_WILDCARD_CHAR) {
+            char pattern_next = '\0';
+            if (pattern_index + 1 < tag_pattern->length) {
+                pattern_next = tag_pattern->pattern[pattern_index+1];
+            }
+
+            if (pattern_next != '\0') {
+                inside_nontrailing_wildcard = true;
+            }
+
+            if (tag[tag_index] == pattern_next) {
+                inside_nontrailing_wildcard = false;
+                pattern_index++;
+            }
+
+            tag_index++;
+        } else if (pattern_current == BUGOUT_BUZZ_CAPTURE_CHAR) {
+            // Skip pattern ahead to where capture definition ends.
+            pattern_index = tag_pattern->boundary.resume;
+            if (pattern_index == -1) {
+                pattern_index = tag_pattern->length;
+            }
+            result.capture_start = tag_index;
+            int num_skipchar_encounters = 0;
+            while (tag[tag_index] != '\0') {
+                if (tag[tag_index] == tag_pattern->boundary.character) {
+                    if (++num_skipchar_encounters >= tag_pattern->boundary.skip) {
+                        break;
+                    } else {
+                        tag_index++;
+                    }
+                } else {
+                    tag_index++;
+                }
+            }
+            result.capture_end = tag_index - 1;
+        } else {
+            result.match = (tag[tag_index++] == tag_pattern->pattern[pattern_index++]);
+        }
+    }
+
+    if (inside_nontrailing_wildcard) {
+        result.match = false;
+    }
+
+    return result;
+};

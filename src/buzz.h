@@ -1,6 +1,7 @@
 #ifndef _BUGOUT_BUZZ_H
 #define _BUGOUT_BUZZ_H
 
+#include <stdbool.h>
 #include <stdio.h>
 
 #define BUGOUT_BUZZ_WILDCARD_CHAR '*'
@@ -34,6 +35,14 @@ typedef struct TagPatternList{
     struct TagPatternList* next;
 } TagPatternList;
 
+typedef struct BuzzResult {
+    char* tag;
+    TagPattern* tag_pattern;
+    bool match;
+    int capture_start;
+    int capture_end;
+} BuzzResult;
+
 /**
  * Destructor for a linked list of TagPattern objects.
  */
@@ -62,5 +71,16 @@ TagPatternList* load_pattern(TagPatternList* pattern_list, char* raw_pattern);
  * It is the caller's responsibility to free memory allocated for the patterns array.
  */
 TagPatternList* load_patterns_from_file(FILE* ifp);
+
+/**
+ * Applies the given TagPattern to the given tag to see if the tag matches the pattern. If the
+ * pattern contains a capture, returns the start and end positions of the capture using the
+ * capture_start and capture_end fields.
+ * If the capture goes all the way to the end of the tag, capture_start will be non-negative but
+ * capture_end will be -1.
+ *
+ * No memory is allocated inside this function.
+ */
+BuzzResult process_tag(char* tag, TagPattern* tag_pattern);
 
 #endif // _BUGOUT_BUZZ_H

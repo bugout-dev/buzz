@@ -1,3 +1,4 @@
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -92,6 +93,37 @@ int test_load_pattern() {
     return result;
 }
 
+int test_process_tag(char* raw_pattern, char* tag, bool expected_match, int expected_capture_start, int expected_capture_end) {
+    TagPattern tag_pattern = read_pattern(raw_pattern);
+    int result = 0;
+
+    BuzzResult buzz_result = process_tag(tag, &tag_pattern);
+
+    if (buzz_result.match != expected_match) {
+        printf("\t- Unexpected match value: expected - %d, actual - %d\n", buzz_result.match, expected_match);
+        result = 1;
+    }
+
+    if (buzz_result.capture_start != expected_capture_start) {
+        printf("\t- Unexpected capture_start value: expected - %d, actual - %d\n", buzz_result.capture_start, expected_capture_start);
+        result = 1;
+    }
+
+    if (buzz_result.capture_end != expected_capture_end) {
+        printf("\t- Unexpected capture_end value: expected - %d, actual - %d\n", buzz_result.capture_end, expected_capture_end);
+        result = 1;
+    }
+
+    if (result == 0) {
+        printf("\t- SUCCESS!\n");
+    } else {
+        printf("\t- FAILURE!\n");
+    }
+
+    free(tag_pattern.pattern);
+    return result;
+};
+
 int main(int argc, char* argv[]) {
     int result = 0;
 
@@ -124,6 +156,27 @@ int main(int argc, char* argv[]) {
 
     printf("Testing load_patterns with 2 patterns loaded into an empty patterns list...\n");
     result += test_load_pattern();
+
+    printf("Testing matching tag against simple pattern...\n");
+    result += test_process_tag("os:Linux", "os:Linux", true, -1, -1);
+
+    printf("Testing non-matching tag against simple pattern...\n");
+    result += test_process_tag("os:Linux", "os:Windows", false, -1, -1);
+
+    printf("Testing matching tag against pattern with ending wildcard...\n");
+    result += test_process_tag("os:*", "os:Windows", true, -1, -1);
+
+    printf("Testing processing non-matching tag against pattern with ending wildcard...\n");
+    result += test_process_tag("os:*", "python:3", false, -1, -1);
+
+    printf("Testing matching tag against pattern with non-trailing wildcard...\n");
+    result += test_process_tag("os:*x", "os:Linux", true, -1, -1);
+
+    printf("Testing non-matching tag against pattern with non-trailing wildcard...\n");
+    result += test_process_tag("os:*x", "os:Windows", false, -1, -1);
+
+    printf("Testing matching tag against pattern with multiple wildcards...\n");
+    result += test_process_tag("os:*i*", "os:Linux", true, -1, -1);
 
     printf("Failures: %d\n", result);
 

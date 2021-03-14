@@ -20,7 +20,7 @@ int test_read_pattern(char* raw_pattern, char* expected_pattern, int expected_le
         result = 1;
     }
     if (tag_pattern.boundary.character != expected_boundary_character) {
-        printf("\t- Incorrect boundary character: %c. Expected: %c.\n", tag_pattern.boundary.character, expected_boundary_character);
+        printf("\t- Incorrect boundary character: '%c'. Expected: '%c'.\n", tag_pattern.boundary.character, expected_boundary_character);
         result = 1;
     }
     if (tag_pattern.boundary.skip != expected_boundary_skip) {
@@ -105,7 +105,10 @@ int main(int argc, char* argv[]) {
     result += test_read_pattern("python:#<1>.", "python:#<1>.", 12, 7, '.', 1, 11, PARSE_VALID);
 
     printf("Testing pattern with syntactically incorrect capture...\n");
-    result += test_read_pattern("python:#.", "python:#.", 7, 7, '\0', -1, -1, PARSE_INVALID);
+    result += test_read_pattern("python:#<a>.", "python:#<a>.", 7, 7, '\0', -1, -1, PARSE_INVALID);
+
+    printf("Testing pattern with simple capture...\n");
+    result += test_read_pattern("python:#.", "python:#.", 9, 7, '.', 0, 8, PARSE_VALID);
 
     printf("Testing pattern with multiple captures...\n");
     result += test_read_pattern("omg#<0>*wtf#<0>*bbq", "omg#<0>*wtf#<0>*bbq", 11, 3, '*', 0, 7, PARSE_INVALID);
@@ -115,6 +118,8 @@ int main(int argc, char* argv[]) {
 
     printf("Testing load_patterns with 2 patterns loaded into an empty patterns list...\n");
     result += test_load_pattern();
+
+    printf("Failures: %d\n", result);
 
     return result;
 }

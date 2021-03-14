@@ -34,26 +34,32 @@ void process_boundary(TagPattern* tag_pattern, int start) {
     boundary.character = '\0';
     boundary.skip = 0;
     boundary.resume = -1;
+    bool done = false;
     // Parse skip
     int current_index = start;
-    if (tag_pattern->pattern[current_index++] != BUGOUT_BUZZ_BOUNDARY_START_CHAR) {
-        tag_pattern->parse_status = PARSE_INVALID;
-        return;
-    }
-    while (isdigit(tag_pattern->pattern[current_index])) {
-        int digit_as_int = tag_pattern->pattern[current_index] - '0';
-        boundary.skip = 10*boundary.skip + digit_as_int;
-        current_index++;
-    }
-    if (tag_pattern->pattern[current_index++] != BUGOUT_BUZZ_BOUNDARY_END_CHAR) {
-        tag_pattern->parse_status = PARSE_INVALID;
-        return;
-    }
-    boundary.character = tag_pattern->pattern[current_index];
-    if (boundary.character != '\0') {
+    if (tag_pattern->pattern[current_index] != BUGOUT_BUZZ_BOUNDARY_START_CHAR) {
+        boundary.character = tag_pattern->pattern[current_index];
         boundary.resume = current_index;
-    } else {
-        boundary.skip = 0;
+        done = true;
+    }
+    if (!done) {
+        current_index++;
+        while (isdigit(tag_pattern->pattern[current_index])) {
+            int digit_as_int = tag_pattern->pattern[current_index] - '0';
+            boundary.skip = 10*boundary.skip + digit_as_int;
+            current_index++;
+        }
+        if (tag_pattern->pattern[current_index++] != BUGOUT_BUZZ_BOUNDARY_END_CHAR) {
+            tag_pattern->parse_status = PARSE_INVALID;
+            return;
+        }
+        boundary.character = tag_pattern->pattern[current_index];
+        if (boundary.character != '\0') {
+            boundary.resume = current_index;
+        } else {
+            boundary.skip = 0;
+        }
+        done = true;
     }
     tag_pattern->length = current_index;
     tag_pattern->boundary = boundary;

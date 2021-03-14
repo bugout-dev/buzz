@@ -1,6 +1,6 @@
 .PHONY: clean all
 
-build: bin/buzz bin/buzztest
+build: bin/buzz bin/test_buzz
 
 clean: lib bin
 	rm -r bin/ lib/
@@ -14,11 +14,11 @@ lib:
 lib/buzz.o: lib
 	gcc -c -o lib/buzz.o src/buzz.c
 
-bin/buzztest: bin lib lib/buzz.o
-	gcc -o bin/buzztest tests/test_buzz.c lib/buzz.o
+bin/test_buzz: bin lib lib/buzz.o
+	gcc -o bin/test_buzz tests/test_buzz.c lib/buzz.o
 
 bin/buzz: bin lib/buzz.o
 	gcc -o bin/buzz src/cmd.c lib/buzz.o
 
-test: bin/buzztest
-	bin/buzztest
+test: bin/test_buzz
+	bin/test_buzz

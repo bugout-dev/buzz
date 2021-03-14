@@ -47,6 +47,50 @@ int test_read_pattern(char* raw_pattern, char* expected_pattern, int expected_le
     return result;
 }
 
+int test_load_pattern() {
+    TagPatternList* patterns = NULL;
+    char* pattern1 = "os:Windows";
+    char* pattern2 = "python:#<1>.";
+    patterns = load_pattern(patterns, pattern1);
+    patterns = load_pattern(patterns, pattern2);
+    int result = 0;
+
+    TagPatternList* head = patterns;
+    if (head == NULL) {
+        printf("\t- Patterns list is empty\n");
+        result = 1;
+    }
+
+    int num_vertices = 0;
+    while (patterns != NULL) {
+        num_vertices++;
+        patterns = patterns->next;
+    }
+    if (num_vertices != 2) {
+        printf("\t- Expected %d vertices, actual: %d\n", 2, num_vertices);
+        result = 1;
+    }
+
+    patterns = head;
+    if (strcmp(patterns->tag_pattern.pattern, pattern2)) {
+        printf("\t- Unexpected pattern string in first pattern: expected - %s, actual - %s\n", pattern2, patterns->tag_pattern.pattern);
+        result = 1;
+    }
+    patterns = patterns->next;
+    if (strcmp(patterns->tag_pattern.pattern, pattern1)) {
+        printf("\t- Unexpected pattern string in first pattern: expected - %s, actual - %s\n", pattern1, patterns->tag_pattern.pattern);
+        result = 1;
+    }
+
+    if (result == 0) {
+        printf("\t- SUCCESS!\n");
+    } else {
+        printf("\t- FAILURE!\n");
+    }
+
+    return result;
+}
+
 int main(int argc, char* argv[]) {
     int result = 0;
 
@@ -67,6 +111,9 @@ int main(int argc, char* argv[]) {
 
     printf("Testing pattern with whitespace in it...\n");
     result += test_read_pattern("omg wtf bbq", "omg wtf bbq", 3, -1, '\0', -1, -1, PARSE_INVALID);
+
+    printf("Testing load_patterns with 2 patterns loaded into an empty patterns list...\n");
+    result += test_load_pattern();
 
     return result;
 }

@@ -1,10 +1,22 @@
 #include <ctype.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
 #include "buzz.h"
+
+void destroy(TagPatternList* tag_pattern_list) {
+    TagPatternList* current_item = tag_pattern_list;
+    TagPatternList* next_item = NULL;
+    while (current_item != NULL) {
+        next_item = current_item->next;
+        free(tag_pattern_list->tag_pattern.pattern);
+        free(tag_pattern_list);
+        current_item = next_item;
+    }
+};
 
 void print_tag_pattern(TagPattern tag_pattern) {
     printf("TagPattern: %s\n", tag_pattern.pattern);
@@ -90,4 +102,44 @@ TagPattern read_pattern(char* raw_pattern) {
     }
     tag_pattern.pattern = pattern_string;
     return tag_pattern;
+};
+
+TagPatternList* load_pattern(TagPatternList* pattern_list, char* raw_pattern) {
+    TagPattern tag_pattern = read_pattern(raw_pattern);
+    if (tag_pattern.parse_status != PARSE_VALID) {
+        // Do not load invalid patterns
+        return pattern_list;
+    }
+
+    TagPatternList* head = (TagPatternList*) malloc(sizeof(TagPatternList));
+    head->tag_pattern = tag_pattern;
+    head->next = pattern_list;
+    return head;
+};
+
+TagPatternList* load_patterns_from_file(FILE* ifp) {
+    TagPatternList* patterns = NULL;
+
+    char c = getc(ifp);
+    char buffer[BUGOUT_BUZZ_MAX_PATTERN_LENGTH + 1];
+    int current_index = 0;
+    bool keep_processing = true;
+    int i = 0;
+
+    while (c != EOF) {
+        if (current_index >= BUGOUT_BUZZ_MAX_PATTERN_LENGTH) {
+            keep_processing = false;
+        }
+        if (isspace(c)) {
+            if (keep_processing && current_index > 0) {
+                buffer[current_index] = '\0';
+                patterns = load_pattern(patterns, buffer);
+            }
+            current_index = 0;
+        } else if (keep_processing) {
+            buffer[current_index++] = c;
+        }
+    }
+
+    return patterns;
 };

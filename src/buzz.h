@@ -28,6 +28,19 @@ typedef struct TagPattern {
     int parse_status;
 } TagPattern;
 
+typedef struct TagPatternList{
+    TagPattern tag_pattern;
+    struct TagPatternList* next;
+} TagPatternList;
+
+/**
+ * Destructor for a linked list of TagPattern objects.
+ */
+void destroy(TagPatternList* tag_pattern_list);
+
+/**
+ * Prints a tag pattern to screen.
+ */
 void print_tag_pattern(TagPattern tag_pattern);
 
 /**
@@ -36,5 +49,17 @@ void print_tag_pattern(TagPattern tag_pattern);
  * are done with it.
  */
 TagPattern read_pattern(char* raw_pattern);
+
+/**
+ * Loads an additional pattern into the given pattern list.
+ * Caller is responsible for freeing allocated memory.
+ */
+TagPatternList* load_pattern(TagPatternList* pattern_list, char* raw_pattern);
+
+/**
+ * Loads tag patterns from a file in which each line contains a distinct pattern.
+ * It is the caller's responsibility to free memory allocated for the patterns array.
+ */
+TagPatternList* load_patterns_from_file(FILE* ifp);
 
 #endif // _BUGOUT_BUZZ_H

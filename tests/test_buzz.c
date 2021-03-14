@@ -100,17 +100,17 @@ int test_process_tag(char* raw_pattern, char* tag, bool expected_match, int expe
     BuzzResult buzz_result = process_tag(tag, &tag_pattern);
 
     if (buzz_result.match != expected_match) {
-        printf("\t- Unexpected match value: expected - %d, actual - %d\n", buzz_result.match, expected_match);
+        printf("\t- Unexpected match value: actual - %d, expected - %d\n", buzz_result.match, expected_match);
         result = 1;
     }
 
     if (buzz_result.capture_start != expected_capture_start) {
-        printf("\t- Unexpected capture_start value: expected - %d, actual - %d\n", buzz_result.capture_start, expected_capture_start);
+        printf("\t- Unexpected capture_start value: actual - %d, expected - %d\n", buzz_result.capture_start, expected_capture_start);
         result = 1;
     }
 
     if (buzz_result.capture_end != expected_capture_end) {
-        printf("\t- Unexpected capture_end value: expected - %d, actual - %d\n", buzz_result.capture_end, expected_capture_end);
+        printf("\t- Unexpected capture_end value: actual - %d, expected - %d\n", buzz_result.capture_end, expected_capture_end);
         result = 1;
     }
 
@@ -179,9 +179,42 @@ int main(int argc, char* argv[]) {
     result += test_process_tag("os:*x", "os:Windows", false, -1, -1);
 
     printf("Testing matching tag against pattern with multiple wildcards...\n");
-    result += test_process_tag("os:*i*", "os:Linux", true, -1, -1);
+    result += test_process_tag("os:*u*", "os:Linux", true, -1, -1);
 
-    printf("Failures: %d\n", result);
+    printf("Testing matching tag against pattern with multiple wildcards and empty wildcard matches...\n");
+    result += test_process_tag("os:*n*u*x", "os:Linux", true, -1, -1);
+
+    printf("Testing nonmatching tag against pattern with multiple wildcards...\n");
+    result += test_process_tag("os:*u*", "os:Windows", false, -1, -1);
+
+    printf("Testing matching tag against pattern with trailing capture...\n");
+    result += test_process_tag("python:#", "python:3", true, 7, -1);
+
+    printf("Testing matching tag against pattern with trailing long capture...\n");
+    result += test_process_tag("python:#", "python:38", true, 7, -1);
+
+    printf("Testing matching tag against pattern with trailing explicit long capture...\n");
+    result += test_process_tag("python:#<5>", "python:38", true, 7, -1);
+
+    printf("Testing matching tag against pattern with non-trailing capture, stop character, and trailing wildcard...\n");
+    result += test_process_tag("python:#.*", "python:3.8.5", true, 7, 8);
+
+    printf("Testing non-matching tag against pattern with non-trailing capture, stop character, and trailing wildcard...\n");
+    result += test_process_tag("python:#.*", "python:3,8,5", false, 7, 11);
+
+    printf("Testing matching tag against pattern with non-trailing capture, stop character, and skips...\n");
+    result += test_process_tag("python:#<1>.*", "python:3.8.5", true, 7, 10);
+
+    printf("Testing extravagantly non-matching tag against pattern with non-trailing capture, stop character, and skips...\n");
+    result += test_process_tag("python:#<5>.", "python:3.8.5", false, 7, 11);
+
+    printf("Testing barely non-matching tag against pattern with non-trailing capture, stop character, and skips...\n");
+    result += test_process_tag("python:#<2>.", "python:3.8.5", false, 7, 11);
+
+    printf("Testing matching tag against pattern with wildcard then simple capture then wildcard...\n");
+    result += test_process_tag("*:#.*", "python:3.8.5", true, 7, 8);
+
+    printf("FAILURES: %d\n", result);
 
     return result;
 }

@@ -215,19 +215,17 @@ BuzzResult process_tag(char* tag, TagPattern* tag_pattern) {
                 pattern_index = tag_pattern->length;
             }
             result.capture_start = tag_index;
-            int num_skipchar_encounters = 0;
-            while (tag[tag_index] != '\0') {
+            int num_skipchar_encounters = -1;
+            while (tag[tag_index] != '\0' && num_skipchar_encounters < tag_pattern->boundary.skip) {
                 if (tag[tag_index] == tag_pattern->boundary.character) {
-                    if (++num_skipchar_encounters >= tag_pattern->boundary.skip) {
-                        break;
-                    } else {
-                        tag_index++;
-                    }
-                } else {
-                    tag_index++;
+                    num_skipchar_encounters++;
                 }
+                tag_index++;
             }
-            result.capture_end = tag_index - 1;
+            if (!tag_pattern->boundary.character == '\0') {
+                tag_index--;
+                result.capture_end = tag_index;
+            }
         } else {
             result.match = (tag[tag_index++] == tag_pattern->pattern[pattern_index++]);
         }

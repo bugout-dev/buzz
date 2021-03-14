@@ -7,6 +7,7 @@
 #define BUGOUT_BUZZ_CAPTURE_CHAR '#'
 #define BUGOUT_BUZZ_BOUNDARY_START_CHAR '<'
 #define BUGOUT_BUZZ_BOUNDARY_END_CHAR '>'
+#define BUGOUT_BUZZ_MAX_PATTERN_LENGTH 512
 
 enum _parse_status {
     PARSE_VALID = 0,
@@ -31,12 +32,9 @@ void print_tag_pattern(TagPattern tag_pattern);
 
 /**
  * Reads a single TagPattern object from a string.
+ * The input string is copied and it is the caller's responsibility to free this memory when they
+ * are done with it.
  */
 TagPattern read_pattern(char* raw_pattern);
-
-/**
- * Reads a list of TagPattern objects from a file.
- */
-TagPattern* read_patterns(FILE* patterns_file_pointer);
 
 #endif // _BUGOUT_BUZZ_H

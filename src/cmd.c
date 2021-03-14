@@ -1,9 +1,20 @@
 #include "buzz.h"
 
 int main(int argc, char* argv[]) {
-    for (int i = 1; i < argc; i++) {
-        TagPattern tag_pattern = read_pattern(argv[i]);
-        print_tag_pattern(tag_pattern);
+    if (argc > 1) {
+        FILE* ifp = fopen(argv[1], "r");
+        int batch_size = 2;
+        while (1) {
+            TagPatternList patterns = read_patterns(ifp, batch_size);
+            int items = 0;
+            for (int i = 0; i < patterns.length; i++) {
+                print_tag_pattern(patterns.items[i]);
+                items++;
+            }
+            if (items < batch_size) {
+                break;
+            }
+        }
+        fclose(ifp);
     }
-    return 0;
 };

@@ -1,5 +1,7 @@
 #include <ctype.h>
+#include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 
 #include "buzz.h"
@@ -50,29 +52,42 @@ TagPattern read_pattern(char* raw_pattern) {
     tag_pattern.boundary.character = '\0';
     tag_pattern.boundary.resume = -1;
     tag_pattern.boundary.skip = -1;
-    tag_pattern.pattern = raw_pattern;
     tag_pattern.length = 0;
     tag_pattern.capture_from = -1;
     tag_pattern.parse_status = PARSE_VALID;
+
+    int raw_pattern_length = 0;
+    while (raw_pattern[raw_pattern_length++] != '\0') {
+        if (raw_pattern_length >= BUGOUT_BUZZ_MAX_PATTERN_LENGTH) {
+            tag_pattern.parse_status = PARSE_INVALID;
+            break;
+        }
+    }
+    char* pattern_string = (char*) malloc(raw_pattern_length+1);
+    for (int i = 0; i <= raw_pattern_length; i++) {
+        pattern_string[i] = raw_pattern[i];
+    }
+    pattern_string[raw_pattern_length] = '\0';
+    tag_pattern.pattern = pattern_string;
 
     while (raw_pattern[tag_pattern.length] != '\0') {
         if isspace(raw_pattern[tag_pattern.length]) {
             tag_pattern.parse_status = PARSE_INVALID;
             break;
-        }
-        if (raw_pattern[tag_pattern.length] == BUGOUT_BUZZ_CAPTURE_CHAR) {
+        } else if (raw_pattern[tag_pattern.length] == BUGOUT_BUZZ_CAPTURE_CHAR) {
             if (tag_pattern.capture_from > 0) {
                 tag_pattern.parse_status = PARSE_INVALID;
                 break;
             } else {
                 tag_pattern.capture_from = tag_pattern.length;
                 process_boundary(&tag_pattern, tag_pattern.length+1);
-                if (tag_pattern.parse_status == PARSE_INVALID || raw_pattern[tag_pattern.length] == '\0') {
+                if (tag_pattern.parse_status == PARSE_INVALID || tag_pattern.boundary.resume == -1) {
                     break;
                 }
             }
         }
         tag_pattern.length++;
     }
+    tag_pattern.pattern = pattern_string;
     return tag_pattern;
 };

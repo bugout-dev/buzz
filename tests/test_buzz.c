@@ -1,3 +1,5 @@
+#include <string.h>
+
 #include "../src/buzz.h"
 
 int test_read_pattern(char* raw_pattern, char* expected_pattern, int expected_length, int expected_capture_from, char expected_boundary_character, int expected_boundary_skip, int expected_boundary_resume, int expected_parse_status) {
@@ -28,7 +30,7 @@ int test_read_pattern(char* raw_pattern, char* expected_pattern, int expected_le
         printf("\t- Incorrect boundary resume: %d. Expected: %d.\n", tag_pattern.boundary.resume, expected_boundary_resume);
         result = 1;
     }
-    if (tag_pattern.pattern != expected_pattern) {
+    if (strcmp(tag_pattern.pattern, expected_pattern)) {
         printf("\t- Incorrect pattern: \"%s\". Expected: \"%s\".\n", tag_pattern.pattern, expected_pattern);
         result = 1;
     }
@@ -38,6 +40,8 @@ int test_read_pattern(char* raw_pattern, char* expected_pattern, int expected_le
     } else {
         printf("\t- FAILURE!\n");
     }
+
+    free(tag_pattern.pattern);
 
     return result;
 }

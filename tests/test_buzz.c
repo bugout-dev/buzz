@@ -154,6 +154,9 @@ int main(int argc, char* argv[]) {
     printf("Testing pattern with capture after wildcard...\n");
     result += test_read_pattern("omg*#", "omg*#", 4, -1, '\0', -1, -1, PARSE_NO_CAPTURE_AFTER_WILDCARD);
 
+    printf("Testing pattern with wildcard after wildcard...\n");
+    result += test_read_pattern("omg**", "omg**", 4, -1, '\0', -1, -1, PARSE_NO_WILDCARD_AFTER_WILDCARD);
+
     printf("Testing load_patterns with 2 patterns loaded into an empty patterns list...\n");
     result += test_load_pattern();
 

@@ -114,6 +114,10 @@ TagPattern read_pattern(char* raw_pattern) {
             }
         }
         if (raw_pattern[tag_pattern.length] == BUGOUT_BUZZ_WILDCARD_CHAR) {
+            if (post_wildcard) {
+                tag_pattern.parse_status = PARSE_NO_WILDCARD_AFTER_WILDCARD;
+                break;
+            }
             post_wildcard = true;
         } else {
             post_wildcard = false;
@@ -176,8 +180,6 @@ BuzzResult process_tag(char* tag, TagPattern* tag_pattern) {
     result.capture_start = -1;
     result.capture_end = -1;
 
-    bool inside_nontrailing_wildcard = false;
-
     while (result.match) {
         if (tag[tag_index] == '\0') {
             break;
@@ -193,17 +195,19 @@ BuzzResult process_tag(char* tag, TagPattern* tag_pattern) {
             if (pattern_index + 1 < tag_pattern->length) {
                 pattern_next = tag_pattern->pattern[pattern_index+1];
             }
+            bool is_trailing = (pattern_next == '\0');
 
-            if (pattern_next != '\0') {
-                inside_nontrailing_wildcard = true;
+            pattern_index++;
+
+            if (is_trailing) {
+                break;
             }
-
-            if (tag[tag_index] == pattern_next) {
-                inside_nontrailing_wildcard = false;
-                pattern_index++;
+            while (tag[tag_index] != '\0' && tag[tag_index] != pattern_next) {
+                tag_index++;
             }
-
-            tag_index++;
+            if (tag[tag_index] == '\0') {
+                result.match = false;
+            }
         } else if (pattern_current == BUGOUT_BUZZ_CAPTURE_CHAR) {
             // Skip pattern ahead to where capture definition ends.
             pattern_index = tag_pattern->boundary.resume;
@@ -227,10 +231,6 @@ BuzzResult process_tag(char* tag, TagPattern* tag_pattern) {
         } else {
             result.match = (tag[tag_index++] == tag_pattern->pattern[pattern_index++]);
         }
-    }
-
-    if (inside_nontrailing_wildcard) {
-        result.match = false;
     }
 
     return result;

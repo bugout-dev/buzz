@@ -1,6 +1,6 @@
 .PHONY: clean all
 
-all: bin/buzz
+build: bin/buzz bin/buzztest
 
 clean: lib bin
 	rm -r bin/ lib/

@@ -1,4 +1,4 @@
-.PHONY: clean all
+.PHONY: clean build
 
 build: bin/buzz bin/test_buzz
 

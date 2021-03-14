@@ -20,5 +20,5 @@ bin/test_buzz: bin lib lib/buzz.o
 bin/buzz: bin lib/buzz.o
 	gcc -o bin/buzz src/cmd.c lib/buzz.o
 
-test: bin/test_buzz
+test: build
 	bin/test_buzz

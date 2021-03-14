@@ -127,7 +127,6 @@ TagPatternList* load_patterns_from_file(FILE* ifp) {
     int i = 0;
 
     while (c != EOF) {
-        printf("\nHELLO: %c\n", c);
         if (current_index >= BUGOUT_BUZZ_MAX_PATTERN_LENGTH) {
             keep_processing = false;
         }

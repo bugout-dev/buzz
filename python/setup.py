@@ -9,7 +9,11 @@ setup(
     version="0.1.0",
     packages=find_packages(),
     install_requires=[],
-        description="Buzz: Tags pattern matching language.",
+    extras_require={
+        "dev": ["black", "mypy", "wheel", "pytest"],
+        "distribute": ["setuptools", "twine", "wheel"],
+    },
+    description="Buzz: Tags pattern matching language.",
     long_description=long_description,
     long_description_content_type="text/markdown",
     author="Bugout.dev",
@@ -21,4 +25,4 @@ setup(
         "Topic :: Software Development :: Libraries",
     ],
     url="https://github.com/bugout-dev/buzz",
-}
+)

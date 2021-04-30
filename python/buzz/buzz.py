@@ -43,13 +43,10 @@ def load_pattern(patterns: List[TagPattern], raw_pattern: str):
 
 def read_pattern(raw_pattern: str):
 
-    # os:#<0>
-
     pattern = TagPattern()
 
     pattern.boundary = Boundary()
 
-    # pattern.raw = raw_pattern
     pattern_proccesing: List[str] = []
 
     pattern.boundary.skip = -1

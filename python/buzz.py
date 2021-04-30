@@ -1,8 +1,8 @@
-
 from typing import Union, List
 
-BUGOUT_BUZZ_WILDCARD_CHAR = '*' 
-BUGOUT_BUZZ_CAPTURE_CHAR = '#'
+BUGOUT_BUZZ_WILDCARD_CHAR = "*"
+BUGOUT_BUZZ_CAPTURE_CHAR = "#"
+
 
 def read_pattern_from_files(patterns_file_path: str):
     patterns_list = []
@@ -14,19 +14,20 @@ def read_pattern_from_files(patterns_file_path: str):
     return patterns_list
 
 
+class Boundary:
+    character: Union[bool, str]  # resume character
+    skip: int  # amount of skip numbers
+    resume: int  # skip position
 
-class Boundary():
-    character: Union[bool,str] #resume character
-    skip: int #amount of skip numbers
-    resume: int # skip position
 
-class TagPattern():
-    raw: str # original raw patern
-    boundary: Boundary # Skip numbers rule
-    patern_catch_sign_position: int # catch symbol position after what go rule
-    valid: bool # it's valid pattern or no
+class TagPattern:
+    raw: str  # original raw patern
+    boundary: Boundary  # Skip numbers rule
+    patern_catch_sign_position: int  # catch symbol position after what go rule
+    valid: bool  # it's valid pattern or no
 
-class MatchingResult():
+
+class MatchingResult:
     tag: str
     tag_pattern: TagPattern
     match: bool
@@ -38,8 +39,6 @@ def load_pattern(patterns: List[TagPattern], raw_pattern: str):
 
     if tag_pattern.valid:
         patterns.append(tag_pattern)
-    
-
 
 
 def read_pattern(raw_pattern: str):
@@ -50,9 +49,9 @@ def read_pattern(raw_pattern: str):
 
     pattern.boundary = Boundary()
 
-    #pattern.raw = raw_pattern
+    # pattern.raw = raw_pattern
     pattern_proccesing: List[str] = []
-    
+
     pattern.boundary.skip = -1
     pattern.boundary.character = False
     pattern.boundary.resume = -1
@@ -70,12 +69,14 @@ def read_pattern(raw_pattern: str):
 
         if catch:
             catch = False
-            if i == '<':
+            if i == "<":
                 # catch int
                 try:
-                    pattern.boundary.skip = int(raw_pattern[raw_pattern.index("<")+1:raw_pattern.index(">")])
+                    pattern.boundary.skip = int(
+                        raw_pattern[raw_pattern.index("<") + 1 : raw_pattern.index(">")]
+                    )
                 except:
-                    print(raw_pattern[raw_pattern.index("<"):raw_pattern.index(">")])
+                    print(raw_pattern[raw_pattern.index("<") : raw_pattern.index(">")])
                     pattern.valid = False
                     pattern.boundary.skip = -1
                     return pattern
@@ -89,34 +90,30 @@ def read_pattern(raw_pattern: str):
             else:
                 pattern.boundary.resume = index
                 pattern.boundary.character = i
-                
 
-        
         if i == "#":
             if pattern.patern_catch_sign_position != -1:
                 pattern.valid = False
-                pattern.raw = "".join(raw_pattern) 
+                pattern.raw = "".join(raw_pattern)
                 return pattern
             pattern.patern_catch_sign_position = index
             catch = True
             pattern.boundary.skip = 0
-        
+
         if i == " ":
             pattern.valid = False
             pattern.raw = raw_pattern
             return pattern
-        
-
 
         pattern_proccesing.append(i)
 
-    pattern.raw = "".join(pattern_proccesing) 
+    pattern.raw = "".join(pattern_proccesing)
     pattern.valid = True
 
-    
     return pattern
 
-def read_tag(tag: str, pattern: TagPattern ):
+
+def read_tag(tag: str, pattern: TagPattern):
 
     tag_index = 0
     pattern_index = 0
@@ -135,10 +132,10 @@ def read_tag(tag: str, pattern: TagPattern ):
 
         if pattern_current == BUGOUT_BUZZ_WILDCARD_CHAR:
             pattern_next: Union[bool, str] = False
-   
+
             if pattern_index + 1 < len(pattern.raw):
                 pattern_next = pattern.raw[pattern_index + 1]
-            
+
             pattern_index += 1
 
             if not pattern_next:
@@ -146,11 +143,10 @@ def read_tag(tag: str, pattern: TagPattern ):
 
             while tag_index + 1 != len(tag) and tag[tag_index] != pattern_next:
                 tag_index += 1
-            
+
             if len(tag) == tag_index:
                 result.match = False
         elif pattern_current == BUGOUT_BUZZ_CAPTURE_CHAR:
-
 
             pattern_index = pattern.boundary.resume
 
@@ -158,10 +154,13 @@ def read_tag(tag: str, pattern: TagPattern ):
                 pattern_index = len(pattern.raw)
             capture_start = tag_index
             num_skipchar_encounters = -1
-            while tag_index != len(tag) and num_skipchar_encounters < pattern.boundary.skip:
+            while (
+                tag_index != len(tag)
+                and num_skipchar_encounters < pattern.boundary.skip
+            ):
                 if tag[tag_index] == pattern.boundary.character:
                     num_skipchar_encounters += 1
-                
+
                 tag_index += 1
 
             if not pattern.boundary.character == False:
@@ -172,7 +171,3 @@ def read_tag(tag: str, pattern: TagPattern ):
             tag_index += 1
             pattern_index += 1
     return result
-
-    
-
-        

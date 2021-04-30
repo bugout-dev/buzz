@@ -136,7 +136,7 @@ def test_load_pattern():
         ("os:*", "os:Windows", True),
         ("os:*", "python:3", False),
         ("os:*x", "os:Linux", True),
-        ("os:*x", "os:Windows",False),
+        ("os:*x", "os:Windows", False),
         ("os:*u*", "os:Linux", True),
         ("os:*n*u*x", "os:Linux", True),
         ("os:*u*", "os:Windows", False),
@@ -148,8 +148,8 @@ def test_load_pattern():
         ("python:#<1>.*", "python:3.8.5", True),
         ("python:#<5>.", "python:3.8.5", False),
         ("python:#<2>.", "python:3.8.5", False),
-        ("*:#.*", "python:3.8.5", True)
-    ]
+        ("*:#.*", "python:3.8.5", True),
+    ],
 )
 def test_process_tag(raw_pattern: str, tag: str, expected_match: bool):
     tag_pattern: TagPattern = read_pattern(raw_pattern)
@@ -158,6 +158,7 @@ def test_process_tag(raw_pattern: str, tag: str, expected_match: bool):
     buzz_result: MatchingResult = read_tag(tag, tag_pattern)
 
     assert buzz_result.match == expected_match
+
 
 # if buzz_result.match != expected_match:
 #     print(
@@ -178,32 +179,42 @@ def test_process_tag(raw_pattern: str, tag: str, expected_match: bool):
 def test_read_pattern_1():
     assert 0 == _test_read_pattern("<a>", "<a>", 3, -1, False, -1, -1, True)
 
+
 def test_read_pattern_2():
     assert 0 == _test_read_pattern("os:#<0>", "os:#<0>", 7, 3, False, 0, -1, True)
 
+
 def test_read_pattern_3():
-    assert 0 == _test_read_pattern("python:#<1>.", "python:#<1>.", 12, 7, ".", 1, 11, True)
+    assert 0 == _test_read_pattern(
+        "python:#<1>.", "python:#<1>.", 12, 7, ".", 1, 11, True
+    )
+
 
 def test_read_pattern_4():
     assert 0 == _test_read_pattern(
         "python:#<a>.", "python:#<a>.", 12, 7, False, -1, -1, False
     )
 
+
 def test_read_pattern_5():
     assert 0 == _test_read_pattern("python:#.", "python:#.", 9, 7, ".", 0, 8, True)
+
 
 def test_read_pattern_6():
     assert 0 == _test_read_pattern(
         "omg#<0>*wtf#<0>*bbq", "omg#<0>*wtf#<0>*bbq", 19, 3, "*", 0, 7, False
     )
 
+
 def test_read_pattern_7():
     assert 0 == _test_read_pattern(
         "omg wtf bbq", "omg wtf bbq", 11, -1, False, -1, -1, False
     )
 
+
 def test_read_pattern_8():
     assert 0 == _test_read_pattern("omg*#", "omg*#", 5, -1, False, -1, -1, False)
+
 
 def test_read_pattern_9():
     assert 0 == _test_read_pattern("omg**", "omg**", 5, -1, False, -1, -1, False)

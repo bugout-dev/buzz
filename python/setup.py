@@ -5,7 +5,7 @@ with open("../README.md") as ifp:
     long_description = ifp.read()
 
 setup(
-    name="buzz",
+    name="buzzlang",
     version="0.1.0",
     packages=find_packages(),
     install_requires=[],

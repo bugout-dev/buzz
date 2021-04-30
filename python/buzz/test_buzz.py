@@ -160,22 +160,6 @@ def test_process_tag(raw_pattern: str, tag: str, expected_match: bool):
     assert buzz_result.match == expected_match
 
 
-# if buzz_result.match != expected_match:
-#     print(
-#         "\t- Unexpected match value: actual - {}, expected - {}\n",
-#         buzz_result.match,
-#         expected_match,
-#     )
-#     result = 1
-
-# if result == 0:
-#     print("\t- SUCCESS!\n")
-# else:
-#     print("\t- FAILURE!\n")
-
-# return result
-
-
 def test_read_pattern_1():
     assert 0 == _test_read_pattern("<a>", "<a>", 3, -1, False, -1, -1, True)
 

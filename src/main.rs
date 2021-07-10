@@ -1,5 +1,7 @@
 use clap::{AppSettings, Clap};
 
+mod patterns;
+
 const BUZZ_VERSION: &str = "0.0.1";
 const BUZZ_AUTHOR: &str = "Bugout (engineering@bugout.dev)";
 
@@ -17,4 +19,10 @@ struct Args {
 fn main() {
     let args: Args = Args::parse();
     println!("Patterns: {}, tags: {:?}", args.patterns, args.tags);
+    let result: String = match patterns::Pattern::from(&args.patterns) {
+        Ok(_) => String::from("Bad!"),
+        Err(_) => String::from("Terrible!"),
+    };
+
+    println!("Result: {}", result)
 }

@@ -214,10 +214,12 @@ mod tests {
         let result = Pattern::from(&raw_pattern);
         assert!(!result.is_err(), "Unexpected error: {:?}", result);
 
+        let expected_wildcards_length = 0;
+
         let pattern = result.unwrap();
-        assert_eq!(pattern.pattern, raw_pattern, "Expected: {}, Actual: {}", raw_pattern, pattern.pattern);
-        assert!(pattern.capture.is_none(), "Expected: No capture, Actual: {:?}", pattern.capture);
-        assert_eq!(pattern.wildcards.len(), 0, "Expected: No wildcards, Actual: {:?}", pattern.wildcards);
+        assert_eq!(pattern.pattern, raw_pattern, "Pattern -- Expected: {}, Actual: {}", raw_pattern, pattern.pattern);
+        assert!(pattern.capture.is_none(), "Capture -- Expected: No capture, Actual: {:?}", pattern.capture);
+        assert_eq!(pattern.wildcards.len(), expected_wildcards_length, "Wildcards -- Expected: {}, Actual: {:?}", expected_wildcards_length, pattern.wildcards);
     }
 
     #[test]
@@ -226,13 +228,46 @@ mod tests {
         let result = Pattern::from(&raw_pattern);
         assert!(!result.is_err(), "Unexpected error: {:?}", result);
 
+        let expected_capture_start = 3;
+        let expected_capture_skip = 0;
+        let expected_capture_resume = '#';
+        let expected_wildcards_length = 0;
+
         let pattern = result.unwrap();
-        assert_eq!(pattern.pattern, raw_pattern, "Expected: {}, Actual: {}", raw_pattern, pattern.pattern);
-        assert!(pattern.capture.is_some(), "Pattern capture -- Expected: some capture, Actual: None");
+        assert_eq!(pattern.pattern, raw_pattern, "Pattern -- Expected: {}, Actual: {}", raw_pattern, pattern.pattern);
+        assert!(pattern.capture.is_some(), "Capture -- Expected: some capture, Actual: None");
         let capture = pattern.capture.unwrap();
-        assert_eq!(capture.start, 3, "Capture start -- Expected: 3, Actual: {}", capture.start);
-        assert_eq!(capture.skip, 0, "Capture skip -- Expected: 0, Actual: {}", capture.skip);
-        assert_eq!(capture.resume, '#', "Capture skip -- Expected: #, Actual: {}", capture.resume);
-        assert_eq!(pattern.wildcards.len(), 0, "Expected: No wildcards, Actual: {:?}", pattern.wildcards);
+        assert_eq!(capture.start, expected_capture_start, "Capture start -- Expected: {}, Actual: {}", expected_capture_start, capture.start);
+        assert_eq!(capture.skip, expected_capture_skip, "Capture skip -- Expected: {}, Actual: {}", expected_capture_skip, capture.skip);
+        assert_eq!(capture.resume, expected_capture_resume, "Capture resume -- Expected: {}, Actual: {}", expected_capture_resume, capture.resume);
+        assert_eq!(pattern.wildcards.len(), expected_wildcards_length, "Wildcards -- Expected: {}, Actual: {:?}", expected_wildcards_length, pattern.wildcards);
+    }
+
+    #[test]
+    fn read_valid_pattern_major_version() {
+        let raw_pattern = String::from("version:#.*");
+        let result = Pattern::from(&raw_pattern);
+        assert!(!result.is_err(), "Unexpected error: {:?}", result);
+
+        let expected_capture_start = 8;
+        let expected_capture_skip = 0;
+        let expected_capture_resume = '.';
+        let expected_wildcards_length = 1;
+
+        let pattern = result.unwrap();
+        assert_eq!(pattern.pattern, raw_pattern, "Pattern -- Expected: {}, Actual: {}", raw_pattern, pattern.pattern);
+
+        assert!(pattern.capture.is_some(), "Capture -- Expected: some capture, Actual: None");
+        let capture = pattern.capture.unwrap();
+        assert_eq!(capture.start, expected_capture_start, "Capture start -- Expected: {}, Actual: {}", expected_capture_start, capture.start);
+        assert_eq!(capture.skip, expected_capture_skip, "Capture skip -- Expected: {}, Actual: {}", expected_capture_skip, capture.skip);
+        assert_eq!(capture.resume, expected_capture_resume, "Capture resume -- Expected: {}, Actual: {}", expected_capture_resume, capture.resume);
+
+        assert_eq!(pattern.wildcards.len(), expected_wildcards_length, "Wildcards -- Expected: {}, Actual: {:?}", expected_wildcards_length, pattern.wildcards);
+        let wildcard = pattern.wildcards.front().unwrap();
+        let expected_wildcard_start = 10;
+        let expected_wildcard_resume = '*';
+        assert_eq!(wildcard.start, expected_wildcard_start, "Wildcard start -- Expected: {}, Actual: {}", expected_wildcard_start, wildcard.start);
+        assert_eq!(wildcard.resume, expected_wildcard_resume, "Wildcard resume -- Expected: {}, Actual: {}", expected_wildcard_resume, wildcard.resume);
     }
 }

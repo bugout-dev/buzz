@@ -346,6 +346,67 @@ mod tests {
     }
 
     #[test]
+    fn read_valid_pattern_capture_major_minor_version() {
+        let raw_pattern = String::from("version:#<1>.*");
+        let result = Pattern::from(&raw_pattern);
+        assert!(!result.is_err(), "Unexpected error: {:?}", result);
+
+        let expected_capture_start = 8;
+        let expected_capture_skip = 1;
+        let expected_capture_resume = '.';
+        let expected_wildcards_length = 1;
+
+        let pattern = result.unwrap();
+        assert_eq!(
+            pattern.pattern, raw_pattern,
+            "Pattern -- Expected: {}, Actual: {}",
+            raw_pattern, pattern.pattern
+        );
+
+        assert!(
+            pattern.capture.is_some(),
+            "Capture -- Expected: some capture, Actual: None"
+        );
+        let capture = pattern.capture.unwrap();
+        assert_eq!(
+            capture.start, expected_capture_start,
+            "Capture start -- Expected: {}, Actual: {}",
+            expected_capture_start, capture.start
+        );
+        assert_eq!(
+            capture.skip, expected_capture_skip,
+            "Capture skip -- Expected: {}, Actual: {}",
+            expected_capture_skip, capture.skip
+        );
+        assert_eq!(
+            capture.resume, expected_capture_resume,
+            "Capture resume -- Expected: {}, Actual: {}",
+            expected_capture_resume, capture.resume
+        );
+
+        assert_eq!(
+            pattern.wildcards.len(),
+            expected_wildcards_length,
+            "Wildcards -- Expected length: {}, Actual: {:?}",
+            expected_wildcards_length,
+            pattern.wildcards
+        );
+        let wildcard = pattern.wildcards.front().unwrap();
+        let expected_wildcard_start = 13;
+        let expected_wildcard_resume = '*';
+        assert_eq!(
+            wildcard.start, expected_wildcard_start,
+            "Wildcard start -- Expected: {}, Actual: {}",
+            expected_wildcard_start, wildcard.start
+        );
+        assert_eq!(
+            wildcard.resume, expected_wildcard_resume,
+            "Wildcard resume -- Expected: {}, Actual: {}",
+            expected_wildcard_resume, wildcard.resume
+        );
+    }
+
+    #[test]
     fn read_valid_pattern_capture_5_chars() {
         let raw_pattern = String::from("version:#<5>*");
         let result = Pattern::from(&raw_pattern);
@@ -578,6 +639,86 @@ mod tests {
                 _ => false,
             },
             "Error -- Expected: CaptureAfterCaptureNotAllowed, Actual: {:?}",
+            err
+        );
+    }
+
+    #[test]
+    fn read_invalid_pattern_wildcard_immediately_after_wildcard() {
+        let raw_pattern = String::from("os:**");
+        let result = Pattern::from(&raw_pattern);
+        assert!(result.is_err(), "Expected error. Actual: {:?}", result);
+        let err = result.unwrap_err();
+        assert!(
+            match err {
+                PatternError::WildcardImmediatelyAfterWildcardNotAllowed => true,
+                _ => false,
+            },
+            "Error -- Expected: WildcardImmediatelyAfterWildcardNotAllowed, Actual: {:?}",
+            err
+        );
+    }
+
+    #[test]
+    fn read_invalid_pattern_capture_immediately_after_wildcard() {
+        let raw_pattern = String::from("os:*#");
+        let result = Pattern::from(&raw_pattern);
+        assert!(result.is_err(), "Expected error. Actual: {:?}", result);
+        let err = result.unwrap_err();
+        assert!(
+            match err {
+                PatternError::CaptureImmediatelyAfterWildcardNotAllowed => true,
+                _ => false,
+            },
+            "Error -- Expected: CaptureImmediatelyAfterWildcardNotAllowed, Actual: {:?}",
+            err
+        );
+    }
+
+    #[test]
+    fn read_invalid_pattern_trailing_skip() {
+        let raw_pattern = String::from("os:#<5>");
+        let result = Pattern::from(&raw_pattern);
+        assert!(result.is_err(), "Expected error. Actual: {:?}", result);
+        let err = result.unwrap_err();
+        assert!(
+            match err {
+                PatternError::TrailingSkipNotAllowed => true,
+                _ => false,
+            },
+            "Error -- Expected: TrailingSkipNotAllowed, Actual: {:?}",
+            err
+        );
+    }
+
+    #[test]
+    fn read_invalid_pattern_skip_after_noncapture() {
+        let raw_pattern = String::from("os:<5>*");
+        let result = Pattern::from(&raw_pattern);
+        assert!(result.is_err(), "Expected error. Actual: {:?}", result);
+        let err = result.unwrap_err();
+        assert!(
+            match err {
+                PatternError::SkipAfterNonCaptureNotAllowed => true,
+                _ => false,
+            },
+            "Error -- Expected: SkipAfterNonCaptureNotAllowed, Actual: {:?}",
+            err
+        );
+    }
+
+    #[test]
+    fn read_invalid_pattern_nonumeric_character_in_skip() {
+        let raw_pattern = String::from("version:#<-1>.");
+        let result = Pattern::from(&raw_pattern);
+        assert!(result.is_err(), "Expected error. Actual: {:?}", result);
+        let err = result.unwrap_err();
+        assert!(
+            match err {
+                PatternError::NonNumericCharacterInSkip => true,
+                _ => false,
+            },
+            "Error -- Expected: NonNumericCharacterInSkip, Actual: {:?}",
             err
         );
     }

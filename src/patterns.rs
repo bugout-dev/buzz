@@ -64,29 +64,6 @@ pub enum PatternMatchError {
     UnexpectedWildcardResume,
 }
 
-// python:#
-// python:2.7.1 -> 2.7.1
-// python:3.8.6 -> 3.8.6
-// python:2.6.3 -> 2.6.3
-
-// python:#.*
-// python:2.7.1 -> 2
-// python:3.8.6 -> 3
-// python:2.6.3 -> 2
-
-// python:#<1>.
-// python:2.7.1 -> 2.7
-// python:3.8.6 -> 3.8
-// python:2.6.3 -> 2.6
-
-// python:*.*.*
-// python:2.6.3 -> matches
-// python:2.6 -> does not match
-
-// python:#.*.*
-// python:2.6.3 -> matches with capture "2"
-// python:2.6 -> does not match
-
 impl Pattern {
     /// Parses a raw pattern string into a Pattern object. If the pattern string has invalid syntax,
     /// returns a PatternError.

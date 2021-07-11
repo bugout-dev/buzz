@@ -1,11 +1,19 @@
 use std::collections::VecDeque;
 
+const CAPTURE_CHAR: char = '#';
+const WILDCARD_CHAR: char = '*';
+const SKIP_START_CHAR: char = '<';
+const SKIP_END_CHAR: char = '>';
+
+/// Represents a wildcard (denoted by '*') in a buzz pattern.
 #[derive(Debug, Clone)]
 pub struct Wildcard {
     start: usize,
     resume: char,
 }
 
+/// Represents a capture group (denoted by '#') in a buzz pattern.
+/// Currently, a buzz pattern may have at most one capture group.
 #[derive(Debug)]
 pub struct Capture {
     start: usize,
@@ -13,6 +21,7 @@ pub struct Capture {
     resume: char,
 }
 
+/// Structural representation of a buzz pattern.
 #[derive(Debug)]
 pub struct Pattern {
     pattern: String,
@@ -20,6 +29,7 @@ pub struct Pattern {
     wildcards: VecDeque<Wildcard>,
 }
 
+/// Different reasons that the buzz parser could fail to parse a pattern from its string representation.
 #[derive(Debug)]
 pub enum PatternError {
     // TODO(zomglings): In the future, we may allow multiple captures. For now, only one capture group
@@ -31,6 +41,14 @@ pub enum PatternError {
     TrailingSkipNotAllowed,
     NonNumericCharacterInSkip,
     SkipAfterNonCaptureNotAllowed,
+}
+
+/// Structural representation of the results of processing a tag against a buzz pattern.
+pub struct PatternMatch {
+    pattern: String,
+    tag: String,
+    matches: bool,
+    capture: Option<String>,
 }
 
 // python:#
@@ -60,7 +78,7 @@ impl Pattern {
     /// Parses a raw pattern string into a Pattern object. If the pattern string has invalid syntax,
     /// returns a PatternError.
     /// Pattern syntax:
-    /// Special characters are "#", "*", "<", and ">". Any other character, outside of "<...>" context
+    /// Special characters are '#', '*', '<', and '>'. Any other character, outside of "<...>" context
     /// is treated as specifying an exact character match.
     /// # (capture group) - This specifies that we should capture the slice until the next match. Slices are
     /// captured into a capture variable.
@@ -70,7 +88,7 @@ impl Pattern {
     /// n should be a non-negative integer.
     // TODO(zomglings): For now, we make the assumption that tags do not containg the characters
     // "*", "#", "<", and ">". We should revisit this assumption and fix it later.
-    pub fn from(raw_pattern: &String) -> Result<Pattern, PatternError> {
+    pub fn from(raw_pattern: &String) -> Result<Self, PatternError> {
         let pattern: String = raw_pattern.clone();
         let mut capture: Option<Capture> = None;
         let wildcards_mut: &mut VecDeque<Wildcard> = &mut VecDeque::new();
@@ -83,7 +101,7 @@ impl Pattern {
 
         for (current_index, current_character) in pattern.chars().enumerate() {
             match current_character {
-                '#' => {
+                CAPTURE_CHAR => {
                     if prev_wildcard {
                         return Err(PatternError::CaptureImmediatelyAfterWildcardNotAllowed);
                     }
@@ -103,10 +121,10 @@ impl Pattern {
                     capture = Some(Capture {
                         start: current_index,
                         skip: 0,
-                        resume: '#',
+                        resume: CAPTURE_CHAR,
                     });
                 }
-                '*' => {
+                WILDCARD_CHAR => {
                     if prev_wildcard {
                         return Err(PatternError::WildcardImmediatelyAfterWildcardNotAllowed);
                     }
@@ -117,7 +135,7 @@ impl Pattern {
                                 capture = Some(Capture {
                                     start: inner_capture.start,
                                     skip: inner_capture.skip,
-                                    resume: '*',
+                                    resume: WILDCARD_CHAR,
                                 });
                             }
                             None => {}
@@ -126,14 +144,14 @@ impl Pattern {
 
                     wildcards_mut.push_back(Wildcard {
                         start: current_index,
-                        resume: '*',
+                        resume: WILDCARD_CHAR,
                     });
 
                     prev_capture = false;
                     prev_wildcard = true;
                     prev_skip = false;
                 }
-                '<' => {
+                SKIP_START_CHAR => {
                     if !prev_capture {
                         return Err(PatternError::SkipAfterNonCaptureNotAllowed);
                     }
@@ -141,7 +159,7 @@ impl Pattern {
                     skip = Some(0);
                     prev_skip = true;
                 }
-                '>' => {
+                SKIP_END_CHAR => {
                     in_skip = false;
                     match capture {
                         Some(inner_capture) => {
@@ -204,11 +222,16 @@ impl Pattern {
             wildcards: (*wildcards_mut).clone(),
         });
     }
+
+    // pub fn process(&self, tag: &String) -> PatternMatch {
+    //     let pattern = self.pattern.clone();
+    //     let target = tag.clone();
+    // }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{Pattern, PatternError};
+    use super::{Pattern, PatternError, CAPTURE_CHAR, WILDCARD_CHAR};
 
     #[test]
     fn read_valid_pattern_simple() {
@@ -246,7 +269,7 @@ mod tests {
 
         let expected_capture_start = 3;
         let expected_capture_skip = 0;
-        let expected_capture_resume = '#';
+        let expected_capture_resume = CAPTURE_CHAR;
         let expected_wildcards_length = 0;
 
         let pattern = result.unwrap();
@@ -332,7 +355,7 @@ mod tests {
         );
         let wildcard = pattern.wildcards.front().unwrap();
         let expected_wildcard_start = 10;
-        let expected_wildcard_resume = '*';
+        let expected_wildcard_resume = WILDCARD_CHAR;
         assert_eq!(
             wildcard.start, expected_wildcard_start,
             "Wildcard start -- Expected: {}, Actual: {}",
@@ -393,7 +416,7 @@ mod tests {
         );
         let wildcard = pattern.wildcards.front().unwrap();
         let expected_wildcard_start = 13;
-        let expected_wildcard_resume = '*';
+        let expected_wildcard_resume = WILDCARD_CHAR;
         assert_eq!(
             wildcard.start, expected_wildcard_start,
             "Wildcard start -- Expected: {}, Actual: {}",
@@ -414,7 +437,7 @@ mod tests {
 
         let expected_capture_start = 8;
         let expected_capture_skip = 5;
-        let expected_capture_resume = '*';
+        let expected_capture_resume = WILDCARD_CHAR;
         let expected_wildcards_length = 1;
 
         let pattern = result.unwrap();
@@ -454,7 +477,7 @@ mod tests {
         );
         let wildcard = pattern.wildcards.front().unwrap();
         let expected_wildcard_start = 12;
-        let expected_wildcard_resume = '*';
+        let expected_wildcard_resume = WILDCARD_CHAR;
         assert_eq!(
             wildcard.start, expected_wildcard_start,
             "Wildcard start -- Expected: {}, Actual: {}",
@@ -598,7 +621,7 @@ mod tests {
         wrapped_wildcard = wildcard_iterator.next();
         wildcard = wrapped_wildcard.unwrap();
         let expected_wildcard_start = 7;
-        let expected_wildcard_resume = '*';
+        let expected_wildcard_resume = WILDCARD_CHAR;
         assert_eq!(
             wildcard.start, expected_wildcard_start,
             "Wildcard start -- Expected: {}, Actual: {}",

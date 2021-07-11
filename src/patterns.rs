@@ -44,11 +44,24 @@ pub enum PatternError {
 }
 
 /// Structural representation of the results of processing a tag against a buzz pattern.
+#[derive(Debug)]
 pub struct PatternMatch {
     pattern: String,
     tag: String,
     matches: bool,
-    capture: Option<String>,
+    capture_start: Option<usize>,
+    /// The capture is represented by the slice tag[capture_start.unwrap()..capture_end.unwrap()]
+    capture_end: Option<usize>,
+}
+
+/// Errors that can occur when processing a tag against a given pattern.
+#[derive(Debug)]
+pub enum PatternMatchError {
+    EmptyPatternNotAllowed,
+    EmptyTagNotAllowed,
+    UnexpectedWildcardInPattern,
+    UnexpectedCaptureInPattern,
+    UnexpectedWildcardResume,
 }
 
 // python:#
@@ -223,15 +236,177 @@ impl Pattern {
         });
     }
 
-    // pub fn process(&self, tag: &String) -> PatternMatch {
-    //     let pattern = self.pattern.clone();
-    //     let target = tag.clone();
-    // }
+    pub fn process(&self, tag: &String) -> Result<PatternMatch, PatternMatchError> {
+        let pattern = self.pattern.clone();
+        let target = tag.clone();
+        let mut matches = true;
+        let mut capture_start: Option<usize> = None;
+        let mut capture_end: Option<usize> = None;
+
+        let mut pattern_iterator = pattern.chars();
+        let mut target_iterator = target.chars();
+
+        let mut pattern_char: char = match pattern_iterator.next() {
+            Some(c) => c,
+            None => return Err(PatternMatchError::EmptyPatternNotAllowed),
+        };
+
+        let mut target_char: char = match target_iterator.next() {
+            Some(c) => c,
+            None => return Err(PatternMatchError::EmptyTagNotAllowed),
+        };
+        let mut target_index: usize = 0;
+
+        let mut wildcard_iterator = self.wildcards.iter();
+
+        while matches {
+            if pattern_char == WILDCARD_CHAR {
+                let current_wildcard = match wildcard_iterator.next() {
+                    Some(wildcard) => wildcard,
+                    None => return Err(PatternMatchError::UnexpectedWildcardInPattern),
+                };
+
+                // Iterate through target until:
+                // 0. If the wildcard resume character is WILDCARD_CHAR, we are done.
+                // 1. We hit the wildcard resume character, which signifies we are done with the
+                //    wildcard match.
+                // 2. We exhaust all the characters in the target, which means that we failed to
+                //    match. Note that, since we got past step 0, the wildcard resume character is
+                //    guaranteed to be a non-special pattern character.
+                if current_wildcard.resume == WILDCARD_CHAR {
+                    break;
+                } else if target_char == current_wildcard.resume {
+                    break;
+                } else {
+                    loop {
+                        match target_iterator.next() {
+                            Some(c) => {
+                                target_index += 1;
+                                if c == current_wildcard.resume {
+                                    break;
+                                }
+                            }
+                            None => {
+                                matches = false;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                // Now we have to fast forward the pattern iterator once
+                match pattern_iterator.next() {
+                    Some(c) => {
+                        if c != current_wildcard.resume {
+                            return Err(PatternMatchError::UnexpectedWildcardResume);
+                        }
+                    }
+                    None => {
+                        return Err(PatternMatchError::UnexpectedWildcardResume);
+                    }
+                }
+            } else if pattern_char == CAPTURE_CHAR {
+                let capture = match &self.capture {
+                    Some(inner_capture) => inner_capture,
+                    None => return Err(PatternMatchError::UnexpectedCaptureInPattern),
+                };
+
+                // Iterate through target until:
+                // 0. If the capture is meant to go to the end of the tag, return the starting index
+                //    as capture_start and the string_length as capture_end.
+                // 1. If the capture is meant to stop at a non-CAPTURE_CHAR resume character, keep
+                //    iterating through the target until we hit the character more than capture.skip
+                //    times and mark that position as capture_end.
+                // 2. If we never hit the resume character more than capture.skip times, match fails.
+                capture_start = Some(target_index);
+                let mut skip_count: usize = 0;
+                if capture.resume == CAPTURE_CHAR {
+                    break;
+                }
+                loop {
+                    target_index += 1;
+                    match target_iterator.next() {
+                        Some(c) => {
+                            target_char = c;
+                            if capture.resume != CAPTURE_CHAR && c == capture.resume {
+                                skip_count += 1;
+                                if skip_count > capture.skip {
+                                    break;
+                                }
+                            }
+                        }
+                        None => {
+                            matches = false;
+                            break;
+                        }
+                    }
+                }
+                capture_end = Some(target_index);
+
+                // Now we have to fast forward the pattern iterator until we hit the resume character.
+                loop {
+                    match pattern_iterator.next() {
+                        Some(c) => {
+                            if c == capture.resume {
+                                break;
+                            }
+                        }
+                        None => {
+                            matches = false;
+                            break;
+                        }
+                    }
+                }
+            } else {
+                matches = pattern_char == target_char;
+            }
+
+            let mut pattern_ended: bool = false;
+            let mut tag_ended: bool = false;
+            match pattern_iterator.next() {
+                Some(c) => {
+                    pattern_char = c;
+                }
+                None => {
+                    pattern_ended = true;
+                }
+            };
+            match target_iterator.next() {
+                Some(c) => {
+                    target_index += 1;
+                    target_char = c;
+                }
+                None => {
+                    tag_ended = true;
+                }
+            };
+
+            if pattern_ended && tag_ended {
+                break;
+            } else if pattern_ended != tag_ended {
+                if pattern_ended {
+                    matches = false;
+                } else if tag_ended {
+                    matches = false;
+                }
+            }
+        }
+
+        return Ok(PatternMatch {
+            pattern: pattern,
+            tag: target,
+            matches: matches,
+            capture_start: capture_start,
+            capture_end: capture_end,
+        });
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{Pattern, PatternError, CAPTURE_CHAR, WILDCARD_CHAR};
+    use super::{Capture, Pattern, PatternError, Wildcard, CAPTURE_CHAR, WILDCARD_CHAR};
+
+    use std::collections::VecDeque;
 
     #[test]
     fn read_valid_pattern_simple() {
@@ -744,5 +919,368 @@ mod tests {
             "Error -- Expected: NonNumericCharacterInSkip, Actual: {:?}",
             err
         );
+    }
+
+    #[test]
+    fn process_matching_tag() {
+        let wildcards: VecDeque<Wildcard> = VecDeque::new();
+        let pattern = Pattern {
+            pattern: String::from("matching_tag"),
+            capture: None,
+            wildcards: wildcards,
+        };
+
+        let tag = String::from("matching_tag");
+        let result = pattern.process(&tag);
+
+        assert!(
+            result.is_ok(),
+            "Process result -- Expected: No error, Actual: {:?}",
+            result
+        );
+
+        let processed = result.unwrap();
+        assert_eq!(
+            processed.pattern, pattern.pattern,
+            "Process pattern -- Expected: {}, Actual: {}",
+            pattern.pattern, processed.pattern
+        );
+        assert_eq!(
+            processed.tag, tag,
+            "Process tag -- Expected: {}, Actual: {}",
+            tag, processed.tag
+        );
+        assert!(
+            processed.matches,
+            "Process matches -- Expected: true, Actual processed: {:?}",
+            processed
+        );
+    }
+
+    #[test]
+    fn process_nonmatching_tag() {
+        let wildcards: VecDeque<Wildcard> = VecDeque::new();
+        let pattern = Pattern {
+            pattern: String::from("matching_tag"),
+            capture: None,
+            wildcards: wildcards,
+        };
+
+        let tag = String::from("matching_not_lol_tag");
+        let result = pattern.process(&tag);
+
+        assert!(
+            result.is_ok(),
+            "Process result -- Expected: No error, Actual: {:?}",
+            result
+        );
+
+        let processed = result.unwrap();
+        assert_eq!(
+            processed.pattern, pattern.pattern,
+            "Process pattern -- Expected: {}, Actual: {}",
+            pattern.pattern, processed.pattern
+        );
+        assert_eq!(
+            processed.tag, tag,
+            "Process tag -- Expected: {}, Actual: {}",
+            tag, processed.tag
+        );
+        assert!(
+            !processed.matches,
+            "Process matches -- Expected: false, Actual processed: {:?}",
+            processed
+        );
+    }
+
+    #[test]
+    fn process_nonmatching_tag_due_to_suffix() {
+        let wildcards: VecDeque<Wildcard> = VecDeque::new();
+        let pattern = Pattern {
+            pattern: String::from("matching_tag"),
+            capture: None,
+            wildcards: wildcards,
+        };
+
+        let tag = String::from("matching_tag_not!");
+        let result = pattern.process(&tag);
+
+        assert!(
+            result.is_ok(),
+            "Process result -- Expected: No error, Actual: {:?}",
+            result
+        );
+
+        let processed = result.unwrap();
+        assert_eq!(
+            processed.pattern, pattern.pattern,
+            "Process pattern -- Expected: {}, Actual: {}",
+            pattern.pattern, processed.pattern
+        );
+        assert_eq!(
+            processed.tag, tag,
+            "Process tag -- Expected: {}, Actual: {}",
+            tag, processed.tag
+        );
+        assert!(
+            !processed.matches,
+            "Process matches -- Expected: false, Actual processed: {:?}",
+            processed
+        );
+    }
+
+    #[test]
+    fn process_match_multiple_wildcards() {
+        let mut wildcards: VecDeque<Wildcard> = VecDeque::new();
+        wildcards.push_back(Wildcard {
+            start: 8,
+            resume: '.',
+        });
+        wildcards.push_back(Wildcard {
+            start: 10,
+            resume: '*',
+        });
+        let pattern = Pattern {
+            pattern: String::from("version:*.*"),
+            capture: None,
+            wildcards: wildcards,
+        };
+
+        let tag = String::from("version:1.2");
+        let result = pattern.process(&tag);
+
+        assert!(
+            result.is_ok(),
+            "Process result -- Expected: No error, Actual: {:?}",
+            result
+        );
+
+        let processed = result.unwrap();
+        assert_eq!(
+            processed.pattern, pattern.pattern,
+            "Process pattern -- Expected: {}, Actual: {}",
+            pattern.pattern, processed.pattern
+        );
+        assert_eq!(
+            processed.tag, tag,
+            "Process tag -- Expected: {}, Actual: {}",
+            tag, processed.tag
+        );
+        assert!(
+            processed.matches,
+            "Process matches -- Expected: true, Actual processed: {:?}",
+            processed
+        );
+    }
+
+    #[test]
+    fn process_nonmatch_multiple_wildcards() {
+        let mut wildcards: VecDeque<Wildcard> = VecDeque::new();
+        wildcards.push_back(Wildcard {
+            start: 8,
+            resume: '.',
+        });
+        wildcards.push_back(Wildcard {
+            start: 10,
+            resume: '*',
+        });
+        let pattern = Pattern {
+            pattern: String::from("version:*.*"),
+            capture: None,
+            wildcards: wildcards,
+        };
+
+        let tag = String::from("version:1-2");
+        let result = pattern.process(&tag);
+
+        assert!(
+            result.is_ok(),
+            "Process result -- Expected: No error, Actual: {:?}",
+            result
+        );
+
+        let processed = result.unwrap();
+        assert_eq!(
+            processed.pattern, pattern.pattern,
+            "Process pattern -- Expected: {}, Actual: {}",
+            pattern.pattern, processed.pattern
+        );
+        assert_eq!(
+            processed.tag, tag,
+            "Process tag -- Expected: {}, Actual: {}",
+            tag, processed.tag
+        );
+        assert!(
+            !processed.matches,
+            "Process matches -- Expected: false, Actual processed: {:?}",
+            processed
+        );
+    }
+
+
+    #[test]
+    fn process_python_major_version() {
+        let mut wildcards: VecDeque<Wildcard> = VecDeque::new();
+        wildcards.push_back(Wildcard {
+            start: 9,
+            resume: '*',
+        });
+        let pattern = Pattern {
+            pattern: String::from("python:#.*"),
+            capture: Some(Capture {
+                start: 7,
+                skip: 0,
+                resume: '.',
+            }),
+            wildcards: wildcards,
+        };
+
+        let tag = String::from("python:3.8.5");
+        let result = pattern.process(&tag);
+
+        assert!(
+            result.is_ok(),
+            "Process result -- Expected: No error, Actual: {:?}",
+            result
+        );
+
+        let processed = result.unwrap();
+        assert_eq!(
+            processed.pattern, pattern.pattern,
+            "Process pattern -- Expected: {}, Actual: {}",
+            pattern.pattern, processed.pattern
+        );
+        assert_eq!(
+            processed.tag, tag,
+            "Process tag -- Expected: {}, Actual: {}",
+            tag, processed.tag
+        );
+        assert!(
+            processed.matches,
+            "Process matches -- Expected: true, Actual processed: {:?}",
+            processed
+        );
+        assert!(
+            processed.capture_start.is_some(),
+            "Process capture_start -- Expected: Some, Actual: None"
+        );
+        assert!(
+            processed.capture_end.is_some(),
+            "Process capture_end -- Expected: Some, Actual: None"
+        );
+
+        let expected_capture_start: usize = 7;
+        let expected_capture_end: usize = 8;
+        assert_eq!(processed.capture_start.unwrap(), expected_capture_start);
+        assert_eq!(processed.capture_end.unwrap(), expected_capture_end);
+    }
+
+    #[test]
+    fn process_python_major_minor_version() {
+        let mut wildcards: VecDeque<Wildcard> = VecDeque::new();
+        wildcards.push_back(Wildcard {
+            start: 12,
+            resume: '*',
+        });
+        let pattern = Pattern {
+            pattern: String::from("python:#<1>.*"),
+            capture: Some(Capture {
+                start: 7,
+                skip: 1,
+                resume: '.',
+            }),
+            wildcards: wildcards,
+        };
+
+        let tag = String::from("python:3.8.5");
+        let result = pattern.process(&tag);
+
+        assert!(
+            result.is_ok(),
+            "Process result -- Expected: No error, Actual: {:?}",
+            result
+        );
+
+        let processed = result.unwrap();
+        assert_eq!(
+            processed.pattern, pattern.pattern,
+            "Process pattern -- Expected: {}, Actual: {}",
+            pattern.pattern, processed.pattern
+        );
+        assert_eq!(
+            processed.tag, tag,
+            "Process tag -- Expected: {}, Actual: {}",
+            tag, processed.tag
+        );
+        assert!(
+            processed.matches,
+            "Process matches -- Expected: true, Actual processed: {:?}",
+            processed
+        );
+        assert!(
+            processed.capture_start.is_some(),
+            "Process capture_start -- Expected: Some, Actual: None"
+        );
+        assert!(
+            processed.capture_end.is_some(),
+            "Process capture_end -- Expected: Some, Actual: None"
+        );
+
+        let expected_capture_start: usize = 7;
+        let expected_capture_end: usize = 10;
+        assert_eq!(processed.capture_start.unwrap(), expected_capture_start);
+        assert_eq!(processed.capture_end.unwrap(), expected_capture_end);
+    }
+
+    #[test]
+    fn process_python_version() {
+        let wildcards: VecDeque<Wildcard> = VecDeque::new();
+        let pattern = Pattern {
+            pattern: String::from("python:#"),
+            capture: Some(Capture {
+                start: 7,
+                skip: 0,
+                resume: '#',
+            }),
+            wildcards: wildcards,
+        };
+
+        let tag = String::from("python:3.8.5");
+        let result = pattern.process(&tag);
+
+        assert!(
+            result.is_ok(),
+            "Process result -- Expected: No error, Actual: {:?}",
+            result
+        );
+
+        let processed = result.unwrap();
+        assert_eq!(
+            processed.pattern, pattern.pattern,
+            "Process pattern -- Expected: {}, Actual: {}",
+            pattern.pattern, processed.pattern
+        );
+        assert_eq!(
+            processed.tag, tag,
+            "Process tag -- Expected: {}, Actual: {}",
+            tag, processed.tag
+        );
+        assert!(
+            processed.matches,
+            "Process matches -- Expected: true, Actual processed: {:?}",
+            processed
+        );
+        assert!(
+            processed.capture_start.is_some(),
+            "Process capture_start -- Expected: Some, Actual: None"
+        );
+        assert!(
+            processed.capture_end.is_none(),
+            "Process capture_end -- Expected: None, Actual processed: {:?}",
+            processed
+        );
+
+        let expected_capture_start: usize = 7;
+        assert_eq!(processed.capture_start.unwrap(), expected_capture_start);
     }
 }
